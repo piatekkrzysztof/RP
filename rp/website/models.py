@@ -5,6 +5,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
+from django.core.exceptions import ObjectDoesNotExist
+
 
 class Tier(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -40,3 +44,16 @@ class ExpLink(models.Model):
     def save(self, *args, **kwargs):
         self.expires_at = timezone.now() + timedelta(seconds=self.duration.total_seconds())
         super().save(*args, **kwargs)
+
+
+@receiver(post_migrate)
+def create_initial_tiers(sender, **kwargs):
+    try:
+        Tier.objects.get(name='Basic')
+    except ObjectDoesNotExist:
+        Tier.objects.create(name='Basic', thumbnail_s_height=200, thumbnail_m_height=0, orginal_link=False,
+                            allow_links=False)
+        Tier.objects.create(name='Premium', thumbnail_s_height=200, thumbnail_m_height=400, orginal_link=True,
+                            allow_links=False)
+        Tier.objects.create(name='Enterprise', thumbnail_s_height=200, thumbnail_m_height=400, orginal_link=True,
+                            allow_links=True)
